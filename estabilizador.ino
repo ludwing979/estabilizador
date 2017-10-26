@@ -90,14 +90,14 @@ MPU6050 mpu;
 // (in degrees) calculated from the quaternions coming from the FIFO.
 // Note that Euler angles suffer from gimbal lock (for more info, see
 // http://en.wikipedia.org/wiki/Gimbal_lock)
-//#define OUTPUT_READABLE_EULER
+#define OUTPUT_READABLE_EULER
 
 // uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
 // pitch/roll angles (in degrees) calculated from the quaternions coming
 // from the FIFO. Note this also requires gravity vector calculations.
 // Also note that yaw/pitch/roll angles suffer from gimbal lock (for
 // more info, see: http://en.wikipedia.org/wiki/Gimbal_lock)
-#define OUTPUT_READABLE_YAWPITCHROLL
+//#define OUTPUT_READABLE_YAWPITCHROLL
 
 // uncomment "OUTPUT_READABLE_REALACCEL" if you want to see acceleration
 // components with gravity removed. This acceleration reference frame is
@@ -305,7 +305,8 @@ void loop() {
             Serial.print("\t");
             Serial.print(euler[1] * 180/M_PI);
             Serial.print("\t");
-            Serial.println(euler[2] * 180/M_PI);
+            if (euler[2] * 180/M_PI >= -90 && euler[2] * 180/M_PI <= 90)
+            Serial.println(euler[2] * 180/M_PI + 90);
         #endif
 
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
@@ -314,10 +315,11 @@ void loop() {
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
             Serial.print("ypr\t");
-            Serial.print(ypr[0] * 180/M_PI);
+            Serial.print(ypr[0] * 180/M_PI + 90);
             Serial.print("\t");
-            Serial.print(ypr[1] * 180/M_PI);
+            Serial.print(ypr[1] * 180/M_PI + 90);
             Serial.print("\t");
+            //if (ypr[2] * 180/M_PI >= -90 && ypr[2] * 180/M_PI <= 90)
             Serial.println(ypr[2] * 180/M_PI);
         #endif
 
