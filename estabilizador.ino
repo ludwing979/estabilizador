@@ -9,7 +9,7 @@
 #define LED_PIN 13
 bool blinkState = true;
 Servo servo_x, servo_y;
-float angulo_x, angulo_y, angulo_z;
+float angulo_x, angulo_y, angulo_z, temp_x, temp_y;
 MPU6050 mpu;               
 
 // MPU control/status vars
@@ -40,16 +40,12 @@ void setup()
 {
   servo_x.attach(10);
   servo_y.attach(9);
-  delay(50);
-  servo_x.write(0);
-  //servo_y.write(0);
-  delay(500);
-  servo_x.write(180);
-  //servo_y.write(180);
-  delay(500);
-  servo_x.write(90);
+  //delay(50);
+  //servo_x.write(90);
   //servo_y.write(90);
-  delay(500);
+  //delay(500);
+  temp_x = 90;
+  temp_y = 90;
 
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   Wire.begin();
@@ -69,13 +65,13 @@ void setup()
 
 
     // supply your own gyro offsets here, scaled for min sensitivity 
-    mpu.setXGyroOffset(127); //220
-    mpu.setYGyroOffset(-49); //76
-    mpu.setZGyroOffset(19); //-85
+    mpu.setXGyroOffset(125); //220
+    mpu.setYGyroOffset(-51); //76
+    mpu.setZGyroOffset(16); //-85
     
-    mpu.setXAccelOffset(1183); //1788
-    mpu.setYAccelOffset(-950);
-    mpu.setZAccelOffset(1361); // 1688 factory default for my test chip
+    mpu.setXAccelOffset(1103); //1788
+    mpu.setYAccelOffset(-943);
+    mpu.setZAccelOffset(1359); // 1688 factory default for my test chip
 
   // make sure it worked (returns 0 if so)
   if (devStatus == 0)
@@ -86,6 +82,7 @@ void setup()
     mpuIntStatus = mpu.getIntStatus();
     packetSize = mpu.dmpGetFIFOPacketSize();
   }
+  
   else
   {
     Serial.print(F("DMP Initialization failed code = "));
@@ -94,8 +91,6 @@ void setup()
   pinMode(LED_PIN, OUTPUT);
 
 }
-
-
 
 void loop(void){
   processAccelGyro();
@@ -141,16 +136,26 @@ void processAccelGyro()
     //Serial.print("\ty: "); Serial.print(angulo_y);
     //Serial.print("\tz: "); Serial.print(angulo_z);
     mpu.resetFIFO();
-
-    
-    if (angulo_x >= 0 && angulo_x <= 190){
+      
+    if (angulo_x >= 0 && angulo_x <= 180){
+      angulo_x = map(angulo_x, 0, 180, 180, 0) + 6;
       Serial.print("\tx: "); Serial.print(angulo_x);
-      servo_x.write(angulo_x);
+      if (abs(angulo_x - temp_x) >= 0.2){
+        servo_x.write(angulo_x);
+        Serial.print("\tx: "); Serial.print("Writing: " + String(angulo_x));
+        temp_x = angulo_x;
+      }
+      
     }
 
-    if (angulo_y >= 0 && angulo_y <= 190){
+    if (angulo_y >= 0 && angulo_y <= 180){
+      //angulo_y = map(angulo_y, 0, 180, 0, 180) + 2;
       Serial.print("\ty: "); Serial.print(angulo_y);
-      servo_y.write(angulo_y);
+      if (abs(angulo_y - temp_y) >= 0.4){
+        servo_y.write(angulo_y);
+        Serial.print("\ty: "); Serial.print("Writing" + String(angulo_y));
+        temp_y = angulo_y;
+      }
     }
     
     mpu.resetFIFO();
