@@ -9,8 +9,10 @@
 #define LED_PIN 13
 bool blinkState = true;
 Servo servo_x, servo_y;
-float angulo_x, angulo_y, angulo_z, temp_x, temp_y;
-MPU6050 mpu;               
+#define ANGULO_ARRAY_SIZE 5
+float angulo_x, angulo_y, angulo_z, temp_x, temp_y, angulo_x_sum, angulo_y_sum;
+float angulo_x_sum_array[ANGULO_ARRAY_SIZE], angulo_y_sum_array[ANGULO_ARRAY_SIZE];
+MPU6050 mpu;      
 
 // MPU control/status vars
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
@@ -40,12 +42,13 @@ void setup()
 {
   servo_x.attach(10);
   servo_y.attach(9);
-  //delay(50);
-  //servo_x.write(90);
-  //servo_y.write(90);
-  //delay(500);
   temp_x = 90;
   temp_y = 90;
+  
+  for (int i = 0; i < ANGULO_ARRAY_SIZE; i++){
+    angulo_x_sum_array[i] = 90;
+    angulo_y_sum_array[i] = 90;
+  }
 
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   Wire.begin();
@@ -132,35 +135,43 @@ void processAccelGyro()
     angulo_y = euler[Y] * 180 / M_PI + 90;
     angulo_z = euler[Z] * 180 / M_PI + 90;
     
-    Serial.println("");
-    //Serial.print("\ty: "); Serial.print(angulo_y);
-    //Serial.print("\tz: "); Serial.print(angulo_z);
     mpu.resetFIFO();
       
     if (angulo_x >= 0 && angulo_x <= 180){
-      angulo_x = map(angulo_x, 0, 180, 180, 0) + 6;
-      Serial.print("\tx: "); Serial.print(angulo_x);
-      if (abs(angulo_x - temp_x) >= 0.2){
-        servo_x.write(angulo_x);
-        Serial.print("\tx: "); Serial.print("Writing: " + String(angulo_x));
-        temp_x = angulo_x;
+      angulo_x = map(angulo_x, 0, 180, 180, 0) + 6; // + 6 degrees of compensation from physical model :P
+      angulo_x_sum = 0;
+      for (int i = 1; i < ANGULO_ARRAY_SIZE; i++){
+        angulo_x_sum_array[i - 1] = angulo_x_sum_array[i];
+        angulo_x_sum += angulo_x_sum_array[i];
       }
-      
+      angulo_x_sum_array[ANGULO_ARRAY_SIZE - 1] = angulo_x;
+      angulo_x_sum += angulo_x;
+      float new_angulo_x = angulo_x_sum / ANGULO_ARRAY_SIZE;
+      if (abs(new_angulo_x - temp_x) >= 0.2){
+        servo_x.write(new_angulo_x);
+        temp_x = new_angulo_x;
+      }
     }
 
     if (angulo_y >= 0 && angulo_y <= 180){
-      //angulo_y = map(angulo_y, 0, 180, 0, 180) + 2;
-      Serial.print("\ty: "); Serial.print(angulo_y);
-      if (abs(angulo_y - temp_y) >= 0.4){
-        servo_y.write(angulo_y);
-        Serial.print("\ty: "); Serial.print("Writing" + String(angulo_y));
-        temp_y = angulo_y;
+      angulo_y_sum = 0;
+      for (int i = 1; i < ANGULO_ARRAY_SIZE; i++){
+        angulo_y_sum_array[i - 1] = angulo_y_sum_array[i];
+        angulo_y_sum += angulo_y_sum_array[i];
       }
+      angulo_y_sum_array[ANGULO_ARRAY_SIZE - 1] = angulo_y;
+      angulo_y_sum += angulo_y;
+      float new_angulo_y = angulo_y_sum / ANGULO_ARRAY_SIZE;
+      
+      if (abs(new_angulo_y - temp_y) >= 0.2){
+        servo_y.write(new_angulo_y);
+        temp_y = new_angulo_y;
+      }
+      
     }
     
     mpu.resetFIFO();
 
-    
     blinkState = !blinkState;
     digitalWrite(LED_PIN, blinkState);
   }
@@ -170,7 +181,3 @@ void processAccelGyro()
             
             
             
-
-
-
-
